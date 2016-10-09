@@ -1,13 +1,13 @@
 name:                ytcasts2
 version:             0.1.0.0
-synopsis:            Initial project template from stack
+synopsis:            youtube channel "casts" downloading tool
 description:         Please see README.md
-homepage:            https://github.com/githubuser/ytcasts2#readme
-license:             BSD3
+homepage:            https://github.com/justinwoo/ytcasts2#readme
+license:             MIT
 license-file:        LICENSE
-author:              Author name here
-maintainer:          example@example.com
-copyright:           2016 Author name here
+author:              justinwoo
+maintainer:          moomoowoo@gmail.com
+copyright:           2016 Justin Woo
 category:            Web
 build-type:          Simple
 -- extra-source-files:
@@ -44,4 +44,4 @@ test-suite ytcasts2-test
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/ytcasts2
+  location: https://github.com/justinwoo/ytcasts2
