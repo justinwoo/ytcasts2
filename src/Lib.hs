@@ -49,7 +49,7 @@ fetchCasts (URL url) =
       if "yt-uix-tile-link" `elem` classNames
         then pure Cast
           { title = Title title'
-          , link = URL ("https://youtube.com" ++ link')
+          , link = URL ("https://www.youtube.com" ++ link')
           }
         else mempty
     matchA _ =

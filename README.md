@@ -18,4 +18,6 @@ add `config.json` with the following format:
 }
 ```
 
+and add a `data` sqlite file with the schema in `schema.sql`.
+
 then run `ytcasts2-exe` in this directory.
