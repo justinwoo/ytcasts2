@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Lib
     ( main
@@ -8,9 +9,11 @@ module Lib
 
 import Prelude hiding (readFile)
 
+import Control.Exception.Base (bracket)
+import Control.Monad (unless, void)
 import Data.Aeson (eitherDecode, FromJSON)
 import Data.ByteString.Lazy (readFile, ByteString)
-import Data.Foldable (traverse_)
+import Data.Foldable (traverse_, for_)
 import Data.List (words)
 import Database.SQLite.Simple (Only(Only), query, execute, open, close, Connection)
 import GHC.Generics
@@ -61,27 +64,21 @@ fetchCasts (URL url) =
 
 downloadCast :: Connection -> Cast -> IO ()
 downloadCast conn Cast {title = Title title', link = URL link'} = do
-  exists <- rowExists <$> query conn "SELECT 1 FROM downloads WHERE link = ?" (Only link')
-  if exists
-    then pure ()
-    else do
-      putStrLn $ "downloading " ++ title' ++ " from " ++ link'
-      _ <- readProcess "youtube-dl"
-        [ "-o"
-        , "downloads/%(title)s.%(ext)s"
-        , "-x"
-        , "--audio-format"
-        , "mp3"
-        , link'
-        ] ""
-      execute conn "INSERT INTO downloads (link, title, created) VALUES (?, ?, datetime('now'));"
-        (link', title')
-      pure ()
-  where
-    rowExists :: [Only Int] -> Bool
-    rowExists rows = case length rows of
-      0 -> False
-      _ -> True
+  exists <-
+    not . null <$>
+    (query conn "SELECT 1 FROM downloads WHERE link = ?" (Only link') :: IO [Only Int])
+  unless exists $ do
+    putStrLn $ "downloading " ++ title' ++ " from " ++ link'
+    void $ readProcess "youtube-dl"
+      [ "-o"
+      , "downloads/%(title)s.%(ext)s"
+      , "-x"
+      , "--audio-format"
+      , "mp3"
+      , link'
+      ] ""
+    execute conn "INSERT INTO downloads (link, title, created) VALUES (?, ?, datetime('now'));"
+      (link', title')
 
 downloadCasts :: Connection -> URL -> IO ()
 downloadCasts conn url = do
@@ -92,9 +89,8 @@ main :: IO ()
 main = do
   config <- parseConfig <$> readFile "config.json"
   case config of
-    Right config' -> do
-      conn <- open "data"
-      traverse_ (downloadCasts conn) (targets config')
-      close conn
+    Right Config {targets} ->
+      bracket (open "data") close $
+        for_ targets . downloadCasts
     Left errMsg ->
       putStrLn $ "Error parsing config.json: " ++ errMsg
