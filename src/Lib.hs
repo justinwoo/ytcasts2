@@ -13,7 +13,7 @@ import Control.Exception.Base (bracket)
 import Control.Monad (unless, void)
 import Data.Aeson (eitherDecode, FromJSON)
 import Data.ByteString.Lazy (readFile, ByteString)
-import Data.Foldable (traverse_, for_)
+import Data.Foldable (for_)
 import Data.List (words)
 import Database.SQLite.Simple (Only(Only), query, execute, open, close, Connection)
 import GHC.Generics
@@ -21,12 +21,11 @@ import System.Process (readProcess)
 import Text.HTML.TagSoup (parseTags, Tag(TagOpen), fromAttrib)
 
 newtype Title = Title String
-  deriving (Generic, Show)
 
 data Cast = Cast
   { title :: Title
   , link :: URL
-  } deriving (Generic, Show)
+  }
 
 newtype URL = URL String
   deriving (Generic, Show, FromJSON)
@@ -83,7 +82,7 @@ downloadCast conn Cast {title = Title title', link = URL link'} = do
 downloadCasts :: Connection -> URL -> IO ()
 downloadCasts conn url = do
   casts <- fetchCasts url
-  traverse_ (downloadCast conn) casts
+  for_ casts (downloadCast conn)
 
 main :: IO ()
 main = do
