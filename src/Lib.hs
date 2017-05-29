@@ -89,7 +89,12 @@ main = do
   config <- parseConfig <$> readFile "config.json"
   case config of
     Right Config {targets} ->
-      bracket (open "data") close $
+      bracket open' close $
         for_ targets . downloadCasts
     Left errMsg ->
       putStrLn $ "Error parsing config.json: " ++ errMsg
+  where
+    open' = do
+      conn <- open "data"
+      execute conn "CREATE TABLE IF NOT EXISTS downloads (link varchar(20) primary key unique, title varchar, created datetime);" ()
+      return conn
