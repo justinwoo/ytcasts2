@@ -13,10 +13,12 @@ import Control.Exception.Base (bracket)
 import Control.Monad (unless, void)
 import Data.Aeson (eitherDecode, FromJSON)
 import Data.ByteString.Lazy (readFile, ByteString)
+import Data.ByteString.Lazy.UTF8 (toString)
 import Data.Foldable (for_)
 import Data.List (words)
 import Database.SQLite.Simple (Only(Only), query, execute, open, close, Connection)
 import GHC.Generics
+import Network.HTTP.Simple
 import System.Process (readProcess)
 import Text.HTML.TagSoup (parseTags, Tag(TagOpen), fromAttrib)
 
@@ -30,7 +32,7 @@ data Cast = Cast
 newtype URL = URL String
   deriving (Generic, Show, FromJSON)
 
-data Config = Config
+newtype Config = Config
   { targets :: [URL]
   } deriving (Generic, Show, FromJSON)
 
@@ -39,11 +41,11 @@ parseConfig = eitherDecode
 
 fetchCasts :: URL -> IO [Cast]
 fetchCasts (URL url) =
-  extractCasts . parseTags <$>
-    readProcess "curl" ["-s", "--get", url] ""
+  case parseRequest url of
+    Just request -> (matchA =<<) . parseTags . toString .
+      getResponseBody <$> httpLBS request
+    _ -> putStrLn ("ignoring invalid URL " ++ url) *> pure []
   where
-    extractCasts =
-      (=<<) matchA
     matchA tag@(TagOpen "a" _) = do
       classNames <- words <$> fromAttrib' "class" tag
       link' <- fromAttrib' "href" tag
@@ -97,4 +99,4 @@ main = do
     open' = do
       conn <- open "data"
       execute conn "CREATE TABLE IF NOT EXISTS downloads (link varchar(20) primary key unique, title varchar, created datetime);" ()
-      return conn
+      pure conn
